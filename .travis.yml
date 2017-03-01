@@ -1,0 +1,20 @@
+sudo: false
+language: python
+matrix:
+  include:
+  - env: TEST='py.test'
+    python: '2.7'
+    install:
+    - pip install -r requirements.txt
+    - pip install -e .
+    script: py.test --flake8 --cov=travisci
+  - env: TEST='py.test'
+    python: '3.5'
+    install:
+    - pip install -r requirements.txt
+    - pip install -e .
+    script: py.test --flake8 --cov=travisci
+  - pip install -r requirements.txt
+env:
+  global:
+    - secure: "FsTjk+XBGNV3IiG++z5dLgPCXKDu9ZZBCfFtQSc41RpmkvqqHONgRidi0sgzab1gSIr76PjOOp83P6gggnLRGgT7D2nWdy8ODFAG2OfBiHCEAMaXEbeTa70S8H2KnfmCWWOLcc0CmJvjY414kMPZ9k2kidmTAdyEfR7rc/vhwNc4x26Ui5GCCXkUFR4upA8+2My+YY5p34wQLuGixCqSSs4rqss9mPTJWmfRescKN3VFoquvxI4m2aHj+fsCiGiqBA0SMbqJTvS5+ASx416NZgvRenP/vkvXiYu0sEAY6ae6WYV5a31ppQS/p+OgrpUYvIBZlByiPBkDusSXQItn56xbEE7G9OhNKDlWUnPwArcmm5SuTys0/MwqNtcJM0DNBQzbG2tarIGPfdGGo+9Rc7BpWWPNrPm/+2tHruZwuXGZYIMKAjulEnQV3x2wTs+f04scnJ0z0mVAe85kpSpQPySRKo7NGtqEyVUvSTNjM2OSloc0EA57w7/Are39fm/LrmCqorZhiHo0S/JmYy1ZEVo5K4Wz0nNE3kQ1jku5CmM6zjL+A7ZfnUWGxpV4g4Q/BP2VYeZuHtUVabZkntx/h6NWULMnkMEIrAhpg2UX1dOzao9Pq7ibHhq6mRryf0Ka1v5OsvN7nwmMnqRefjAw3mrwiTh3QG0pHTox2MjlzWw="
