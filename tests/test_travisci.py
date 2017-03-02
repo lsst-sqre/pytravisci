@@ -8,6 +8,7 @@ from travisci import TravisCI
 
 
 def _test_get_client():
+
     """Test acquiring a TravisCI Client.
     """
     if "TRAVIS_TOKEN" in os.environ:
@@ -34,8 +35,6 @@ def _test_retrieve_public_key(tcli, repo):
 
 # The encrypted strings are salted, so we just test the output format.
 # For the encrypted string, it's base64-encoded.
-
-
 def _test_travis_encrypt(tcli, pubkey, encstr):
     """Test travis_encrypt() method.
     """
