@@ -10,7 +10,7 @@ DESCRIPTION = 'TravisCI Python interaction class'
 AUTHOR = 'Adam Thornton'
 AUTHOR_EMAIL = 'athornton@lsst.org'
 URL = 'https://github.com/sqre-lsst/travisci'
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 LICENSE = 'MIT'
 
 
@@ -42,9 +42,9 @@ setup(
     keywords='lsst',
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=[
-        'sqre-apikit==0.0.11',
+        'sqre-apikit>=0.1.0',
         'pycrypto==2.6.1',
-        'requests==2.13.0'
+        'requests>=2.13.0,<3.0.0'
     ],
     tests_require=['pytest', 'pytest-flake8', 'pytest-cov'],
 )

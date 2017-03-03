@@ -6,11 +6,10 @@ TravisCI manipulation utility class.
 from __future__ import print_function
 import base64
 import os
-import time
 import requests
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
-from apikit import BackendError
+from apikit import BackendError, retry_request, raise_from_response, raise_ise
 
 
 class TravisCI(object):
@@ -41,7 +40,7 @@ class TravisCI(object):
         self.travis_headers["Authorization"] = "token " + self.travis_token
         # Check authentication and fail if it doesn't work.
         req = requests.get(self.travis_host + "/", headers=self.travis_headers)
-        self.raise_from_req(req)
+        raise_from_response(req)
 
     # pylint: disable=no-self-use
     def _debug(self, *args):
@@ -49,31 +48,6 @@ class TravisCI(object):
         """
         if os.environ.get("DEBUG"):
             print("DEBUG:", *args)
-
-    # pylint: disable=no-self-use
-    def raise_ise(self, text):
-        """Turn error text into a BackendError Internal Server Error.  Handy
-        for reraising exceptions in an easy-to-consume-by-the-client form.
-        """
-        if isinstance(text, Exception):
-            # Just in case we are exuberantly passed the entire Exception and
-            #  not its textual representation.
-            text = str(text)
-        raise BackendError(status_code=500,
-                           reason="Internal Server Error",
-                           content=text)
-
-    # pylint: disable=no-self-use
-    def raise_from_req(self, req):
-        """Turn a failed request response into a BackendError.  Handy for
-        reflecting HTTP errors from farther back in the call chain.
-        """
-        if req.status_code < 400:
-            # Request was successful.  Or at least, not a failure.
-            return
-        raise BackendError(status_code=req.status_code,
-                           reason=req.reason,
-                           content=req.text)
 
     def exchange_token(self):
         """Exchange a GitHub token for a TravisCI one.
@@ -85,12 +59,12 @@ class TravisCI(object):
         self._debug("Exchanging GitHub token for Travis CI token")
         req = requests.post(travis_token_url, headers=self.travis_headers,
                             json=postdata)
-        self.raise_from_req(req)
+        raise_from_response(req)
         # pylint: disable=broad-except
         try:
             rdata = req.json()
         except Exception as exc:
-            self.raise_ise(str(exc))
+            raise_ise(str(exc))
         access_token = rdata.get("access_token")
         if not access_token:
             raise BackendError(status_code=403,
@@ -107,7 +81,7 @@ class TravisCI(object):
         if req.status_code == 409:
             # 409 is "already syncing"; so we pretend it was ours.
             req.status_code = 200
-        self.raise_from_req(req)
+        raise_from_response(req)
         self._debug("Travis CI <-> GitHub Sync started")
 
     def enable_travis_webhook(self, slug):
@@ -126,14 +100,14 @@ class TravisCI(object):
         # pylint: disable=too-many-locals
         self.start_travis_sync()
         user_url = self.travis_host + "/repos/" + slug
-        req = self._retry_request("get", user_url,
-                                  headers=self.travis_headers)
+        req = retry_request("get", user_url,
+                            headers=self.travis_headers)
         # Get the ID and flip the switch
         # pylint: disable=broad-except
         try:
             repo_id = req.json()["repo"]["id"]
         except Exception as exc:
-            self.raise_ise(str(exc))
+            raise_ise(str(exc))
         self._debug("GitHub Repository ID: %s" % repo_id)
         hook_url = self.travis_host + "/hooks"
         hook = {
@@ -143,47 +117,9 @@ class TravisCI(object):
             }
         }
         self._debug("Webhook payload:", hook)
-        req = self._retry_request("put", hook_url, headers=self.travis_headers,
-                                  payload=hook)
-        self.raise_from_req(req)
-
-    # pylint: disable = too-many-arguments
-    def _retry_request(self, method, url, headers=None, payload=None,
-                       auth=None, tries=10, initial_interval=5):
-        """Retry an HTTP request with linear backoff.
-        """
-        self._debug("Beginning to wait for request %s %s" % (method, url))
-        method = method.lower()
-        attempt = 1
-        while True:
-            if method == "get":
-                req = requests.get(url, params=payload, headers=headers,
-                                   auth=auth)
-            elif method == "put":
-                req = requests.put(url, json=payload, headers=headers,
-                                   auth=auth)
-            elif method == "post":
-                req = requests.post(url, json=payload, headers=headers,
-                                    auth=auth)
-            else:
-                self.raise_ise("Bad method %s: must be 'get', 'put', "
-                               "or 'post" % method)
-            if req.status_code == 200:
-                break
-            self._debug("%s %s failed %d/%d" % (method, url,
-                                                attempt, tries))
-            errstr = "%d %s [%s]" % (req.status_code, req.reason, req.text)
-            self._debug(errstr)
-            delay = initial_interval * attempt
-            if attempt == tries:
-                rerrstr = "TravisCI request failed after %d tries: %s" \
-                          % (tries, errstr)
-                self.raise_ise(rerrstr)
-            self._debug("Waiting %d seconds." % delay)
-            time.sleep(delay)
-            attempt += 1
-        self._debug("Completed wait for request %s %s" % (method, url))
-        return req
+        req = retry_request("put", hook_url, headers=self.travis_headers,
+                            payload=hook)
+        raise_from_response(req)
 
     def get_public_key(self, repo):
         """Retrieve public key from travis repo.
@@ -192,12 +128,12 @@ class TravisCI(object):
             return self.public_keys[repo]
         keyurl = self.travis_host + "/repos/%s/key" % repo
         # pylint: disable=broad-except, bad-continuation
-        req = self._retry_request("get", keyurl, headers=self.travis_headers)
-        self.raise_from_req(req)
+        req = retry_request("get", keyurl, headers=self.travis_headers)
+        raise_from_response(req)
         try:
             keyjson = req.json()
         except Exception as exc:
-            self.raise_ise(str(exc))
+            raise_ise(str(exc))
         pubkey = keyjson.get("key")
         if pubkey:
             self.public_keys[repo] = pubkey
