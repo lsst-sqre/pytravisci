@@ -84,24 +84,57 @@ class TravisCI(object):
         raise_from_response(req)
         self._debug("Travis CI <-> GitHub Sync started")
 
-    def enable_travis_webhook(self, slug):
+    def enable_travis_webhook(self, slug, retry_args=None):
         """Enable repository for Travis CI.
-        """
-        self.set_travis_webhook(slug, enabled=True)
 
-    def disable_travis_webhook(self, slug):
+        Parameters
+        ----------
+        slug : `str`
+            GitHub repository slug (``<org>/<repo>``).
+        retry_args : `dict`, optional
+            Optional dictionary of keyward arguments passed to
+            `apikit.retry_request`. Use this to control the number of retries
+            attempted (``'tries'`` key) or interval factor
+            (``'initial_interval' key, in seconds).
+        """
+        self.set_travis_webhook(slug, enabled=True, retry_args=retry_args)
+
+    def disable_travis_webhook(self, slug, retry_args=None):
         """Disable repository for Travis CI.
-        """
-        self.set_travis_webhook(slug, enabled=False)
 
-    def set_travis_webhook(self, slug, enabled=True):
+        Parameters
+        ----------
+        slug : `str`
+            GitHub repository slug (``<org>/<repo>``).
+        retry_args : `dict`, optional
+            Optional dictionary of keyward arguments passed to
+            `apikit.retry_request`. Use this to control the number of retries
+            attempted (``'tries'`` key) or interval factor
+            (``'initial_interval' key, in seconds).
+        """
+        self.set_travis_webhook(slug, enabled=False, retry_args=retry_args)
+
+    def set_travis_webhook(self, slug, enabled=True, retry_args=None):
         """Enable/disable repository for Travis CI.
+
+        Parameters
+        ----------
+        slug : `str`
+            GitHub repository slug (``<org>/<repo>``).
+        retry_args : `dict`, optional
+            Optional dictionary of keyward arguments passed to
+            `apikit.retry_request`. Use this to control the number of retries
+            attempted (``'tries'`` key) or interval factor
+            (``'initial_interval' key, in seconds).
         """
         # pylint: disable=too-many-locals
+        if retry_args is None:
+            retry_args = {}
         self.start_travis_sync()
         user_url = self.travis_host + "/repos/" + slug
         req = retry_request("get", user_url,
-                            headers=self.travis_headers)
+                            headers=self.travis_headers,
+                            **retry_args)
         # Get the ID and flip the switch
         # pylint: disable=broad-except
         try:
@@ -118,7 +151,8 @@ class TravisCI(object):
         }
         self._debug("Webhook payload:", hook)
         req = retry_request("put", hook_url, headers=self.travis_headers,
-                            payload=hook)
+                            payload=hook,
+                            **retry_args)
         raise_from_response(req)
 
     def get_public_key(self, repo):
