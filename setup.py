@@ -10,7 +10,7 @@ DESCRIPTION = 'TravisCI Python interaction class'
 AUTHOR = 'Adam Thornton'
 AUTHOR_EMAIL = 'athornton@lsst.org'
 URL = 'https://github.com/sqre-lsst/travisci'
-VERSION = '0.0.3'
+VERSION = '0.0.4'
 LICENSE = 'MIT'
 
 
